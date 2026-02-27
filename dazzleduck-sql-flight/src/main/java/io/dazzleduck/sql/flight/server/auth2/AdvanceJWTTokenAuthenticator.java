@@ -4,6 +4,7 @@ import com.google.common.base.Strings;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import io.dazzleduck.sql.common.ConfigConstants;
+import io.dazzleduck.sql.common.Headers;
 import io.grpc.Metadata;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
@@ -138,6 +139,14 @@ public class AdvanceJWTTokenAuthenticator implements CallHeaderAuthenticator {
                 var claimFromJwt = payload.get(key, String.class);
                 allClaimsFromJWT.put(key, claimFromJwt);
             }
+            // Always extract token_type regardless of claimHeader config,
+            // so the authorizer can dispatch inline vs redirect without any config change
+            var tokenType = payload.get(Headers.HEADER_TOKEN_TYPE, String.class);
+            if (tokenType != null) {
+                allClaimsFromJWT.put(Headers.HEADER_TOKEN_TYPE, tokenType);
+            }
+            // Store the raw bearer token so redirect authorizer can forward it to /resolve
+            allClaimsFromJWT.put(Headers.HEADER_BEARER_TOKEN, bearerToken);
             return new AuthResultWithClaims(subject, bearerToken, allClaimsFromJWT);
 
         } catch (Exception e) {
